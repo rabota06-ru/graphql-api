@@ -1,0 +1,22 @@
+{
+  "name": "graphql-api",
+  "version": "1.0.0",
+  "description": "API-cервер для сайта rabota06.ru",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rabota06-ru/graphql-api.git"
+  },
+  "author": "Movsar Khalakhoev",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rabota06-ru/graphql-api/issues"
+  },
+  "homepage": "https://github.com/rabota06-ru/graphql-api#readme",
+  "devDependencies": {
+    "typescript": "^4.8.4"
+  }
+}

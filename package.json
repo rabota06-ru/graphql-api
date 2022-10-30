@@ -7,7 +7,7 @@
     "start:dev": "npm run prisma:migrate:dev && npm run prisma:generate && nodemon -r tsconfig-paths/register src/index.ts ",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
-    "start:prod": "npm run prisma:generate && prisma migrate deploy && rm -rf ./build && tsc --build && node ./build/index.js",
+    "start:prod": "npm run prisma:generate && prisma migrate deploy && rm -rf ./build && tsc --build && node ./build/src/index.js",
     "build": "rm -rf ./build && tsc --build"
   },
   "repository": {

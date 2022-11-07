@@ -1,16 +1,35 @@
-export function ensureEnviromentVariables() {
-  const envVariables = ["DATABASE_URL"];
-  const missingVariables: string[] = [];
+class ConfigService {
+  constructor(private env: { [k: string]: string | undefined }) {}
 
-  envVariables.forEach((variable) => {
-    if (process.env[variable] === undefined) {
-      missingVariables.push(variable);
+  private getValue(key: string): string {
+    const value = this.env[key];
+    if (!value) throw new Error(`Отсутствует переменная окружения ${key}`);
+
+    return value;
+  }
+
+  public ensureValues(keys: string[]) {
+    keys.forEach((k) => this.getValue(k));
+  }
+
+  public isProduction() {
+    try {
+      const mode = this.getValue("NODE_ENV");
+      return mode === "production";
+    } catch {
+      return false;
     }
-  });
+  }
 
-  if (missingVariables.length) {
-    throw new Error(
-      `Необходимо передать переменные окружения ${missingVariables.join(", ")}`
-    );
+  public getAccessTokenKey() {
+    return this.getValue("ACCESS_TOKEN_KEY");
+  }
+
+  public getRefreshTokenKey() {
+    return this.getValue("REFRESH_TOKEN_KEY");
   }
 }
+
+const configService = new ConfigService(process.env);
+
+export default configService;

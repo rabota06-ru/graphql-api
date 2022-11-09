@@ -33,11 +33,19 @@ export class AuthResolver {
   ): Promise<SendMessageOutput> {
     const generatedCode = generateRandomAuthCode();
 
-    const cachedValue = cacheService.cacheValue(
-      { code: generatedCode, phone: input.phone },
-      {
-        expiresIn: Date.now() + 1000 * 60 * 5,
-      }
+    const cachedValue = cacheService.cacheValue<{
+      authToken: string;
+      phone: string;
+      code: string;
+    }>(
+      (id) => ({
+        authToken: jwt.sign({ cacheId: id }, configService.getAuthTokenKey(), {
+          expiresIn: 60 * 5,
+        }),
+        phone: input.phone,
+        code: generatedCode,
+      }),
+      { expiresIn: Date.now() + 1000 * 60 * 5 }
     );
 
     await smsService
@@ -50,7 +58,7 @@ export class AuthResolver {
       });
 
     return {
-      cacheId: cachedValue.id,
+      authToken: cachedValue.value.authToken,
     };
   }
 
@@ -58,23 +66,31 @@ export class AuthResolver {
   async verifyAuthCode(
     @Arg("input") input: VerifyAuthCodeInput
   ): Promise<VerifyAuthCodeOutput> {
-    const cached = cacheService.getValueWhere<{
-      code: string;
-      phone: string;
-    }>(
-      (value) =>
-        typeof value === "object" &&
-        value !== null &&
-        (value as any).phone === input.phone
-    );
+    let cacheId: number;
+    try {
+      cacheId = +(
+        jwt.verify(input.authToken, configService.getAuthTokenKey()) as Record<
+          "cacheId",
+          string
+        >
+      ).cacheId;
+    } catch {
+      throw new ApolloError("Не получилось авторизоваться");
+    }
 
-    if (cached?.value.code !== input.code) {
+    const cached = cacheService.getValueById<{
+      authToken: string;
+      phone: string;
+      code: string;
+    }>(cacheId);
+
+    if (cached?.code !== input.code) {
       return {
         authenticated: false,
       };
     }
 
-    cacheService.clearValueById(cached.id);
+    cacheService.clearValueById(cacheId);
 
     const cachedValue = cacheService.cacheValue<{
       authToken: string;
@@ -84,7 +100,7 @@ export class AuthResolver {
         authToken: jwt.sign({ cacheId: id }, configService.getAuthTokenKey(), {
           expiresIn: 60 * 5,
         }),
-        phone: input.phone,
+        phone: cached.phone,
       }),
       { expiresIn: Date.now() + 1000 * 60 * 5 }
     );

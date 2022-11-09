@@ -1,7 +1,7 @@
 import { Field, ObjectType } from "type-graphql";
 
 @ObjectType()
-export class LoginOutput {
+export class SendMessageOutput {
   @Field()
-  accessToken: string;
+  cacheId: number;
 }

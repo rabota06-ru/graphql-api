@@ -28,6 +28,17 @@ class ConfigService {
   public getRefreshTokenKey() {
     return this.getValue("REFRESH_TOKEN_KEY");
   }
+
+  public getAuthTokenKey() {
+    return this.getValue("AUTH_TOKEN_KEY");
+  }
+
+  public getSmsApiCredentials() {
+    return {
+      key: this.getValue("SMS_API_KEY"),
+      email: this.getValue("SMS_API_EMAIL"),
+    };
+  }
 }
 
 const configService = new ConfigService(process.env);

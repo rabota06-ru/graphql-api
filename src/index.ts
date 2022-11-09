@@ -5,7 +5,7 @@ import { buildSchema } from "type-graphql";
 import { ApolloServer } from "apollo-server";
 import { PrismaClient } from "@prisma/client";
 import { resolvers } from "../prisma/generated";
-import configService from "./utils/ensure-env-vars";
+import configService from "./services/config.service";
 import { AuthResolver } from "./auth/auth.resolver";
 
 dotenv.config();
@@ -13,6 +13,9 @@ configService.ensureValues([
   "DATABASE_URL",
   "ACCESS_TOKEN_KEY",
   "REFRESH_TOKEN_KEY",
+  "SMS_API_KEY",
+  "SMS_API_EMAIL",
+  "AUTH_TOKEN_KEY",
 ]);
 
 export interface IContext {

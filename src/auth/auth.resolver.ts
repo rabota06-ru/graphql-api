@@ -1,16 +1,22 @@
-import { LoginInput } from "./dto/login.input";
-import { LoginOutput } from "./dto/login.output";
-import * as bcrypt from "bcryptjs";
-import * as uuid from "uuid";
-import * as jwt from "jsonwebtoken";
-import { Arg, Mutation, Resolver, Ctx, Args, Query } from "type-graphql";
+import { Arg, Ctx, Mutation, Query, Resolver } from "type-graphql";
 import { IContext } from "..";
-import { ApolloError } from "apollo-server";
-import configService from "../utils/ensure-env-vars";
-import { GraphQLVoid } from "graphql-scalars";
-import { RefreshTokenOutput } from "./dto/refreshToken.output";
-import { CheckAuthenticatedOutput } from "./dto/checkAuthenticated.output";
+import cacheService from "../services/cache.service";
+import smsService from "../services/sms.service";
+import * as bcrypt from "bcryptjs";
+import * as jwt from "jsonwebtoken";
+import { generateRandomAuthCode } from "../utils/generate-random-auth-code";
+import { SendMessageInput } from "./dto/send-message.input";
+import { SendMessageOutput } from "./dto/send-message.output";
+import { VerifyAuthCodeInput } from "./dto/verify-auth-code.input";
+import { VerifyAuthCodeOutput } from "./dto/verify-auth.code.output";
 import { addDays } from "../utils/date";
+import { ApolloError } from "apollo-server";
+import configService from "../services/config.service";
+import { GraphQLVoid } from "graphql-scalars";
+import { CheckAuthenticatedOutput } from "./dto/check-authenticated.output";
+import { LoginAdminInput } from "./dto/login-admin.input";
+import { AccessTokenOutput } from "./dto/access-token.output";
+import { LoginUserInput } from "./dto/login-user.input";
 
 interface TokenPayload {
   userId: string;
@@ -21,29 +27,117 @@ export class AuthResolver {
   REFRESH_TOKEN_EXPIRES_IN_DAYS = 30;
   ACCESS_TOKEN_EXPIRES_IN_MINUTES = 30;
 
-  @Mutation(() => LoginOutput)
-  async login(
-    @Arg("loginInput") loginInput: LoginInput,
+  @Mutation(() => SendMessageOutput)
+  async sendAuthCodeMessage(
+    @Arg("input") input: SendMessageInput
+  ): Promise<SendMessageOutput> {
+    const generatedCode = generateRandomAuthCode();
+
+    const cachedValue = cacheService.cacheValue(
+      { code: generatedCode, phone: input.phone },
+      {
+        expiresIn: Date.now() + 1000 * 60 * 5,
+      }
+    );
+
+    await smsService
+      .sendAuthenticationCode({
+        code: generatedCode,
+        phone: input.phone,
+      })
+      .catch(() => {
+        throw new ApolloError("Не удалось отправить код");
+      });
+
+    return {
+      cacheId: cachedValue.id,
+    };
+  }
+
+  @Mutation(() => VerifyAuthCodeOutput)
+  async verifyAuthCode(
+    @Arg("input") input: VerifyAuthCodeInput
+  ): Promise<VerifyAuthCodeOutput> {
+    const cached = cacheService.getValueWhere<{
+      code: string;
+      phone: string;
+    }>(
+      (value) =>
+        typeof value === "object" &&
+        value !== null &&
+        (value as any).phone === input.phone
+    );
+
+    if (cached?.value.code !== input.code) {
+      return {
+        authenticated: false,
+      };
+    }
+
+    cacheService.clearValueById(cached.id);
+
+    const cachedValue = cacheService.cacheValue<string>(
+      (id) => ({
+        authToken: jwt.sign({ cacheId: id }, configService.getAuthTokenKey(), {
+          expiresIn: 60 * 5,
+        }),
+        phone: input.phone,
+      }),
+      { expiresIn: Date.now() + 1000 * 60 * 5 }
+    );
+
+    return {
+      authenticated: true,
+      authToken: cachedValue.value,
+    };
+  }
+
+  @Mutation(() => AccessTokenOutput)
+  async loginUser(
+    @Arg("input") input: LoginUserInput,
     @Ctx() context: IContext
-  ) {
+  ): Promise<AccessTokenOutput> {
+    let cacheId: number;
+    try {
+      cacheId = +(
+        jwt.verify(input.authToken, configService.getAuthTokenKey()) as Record<
+          "cacheId",
+          string
+        >
+      ).cacheId;
+    } catch {
+      throw new ApolloError("Не получилось авторизоваться");
+    }
+
+    const cachedValue = cacheService.getValueById<{
+      authToken: string;
+      phone: string;
+    }>(cacheId);
+
+    if (!cachedValue) throw new ApolloError("Не получилось авторизоваться");
+
     const user = await context.prisma.user.findUnique({
-      where: { login: loginInput.login },
-      select: {
-        id: true,
-        password: true,
-      },
-    });
-    if (!user) throw new ApolloError("Не удалось авторизоваться");
-
-    if (!(await bcrypt.compare(loginInput.password, user.password)))
-      throw new ApolloError("Не удалось авторизоваться");
-
-    context.res.cookie("refresh_token", uuid.v4(), {
-      httpOnly: true,
-      expires: addDays(new Date(), this.REFRESH_TOKEN_EXPIRES_IN_DAYS),
+      where: { login: cachedValue.phone },
     });
 
-    return <LoginOutput>{
+    if (!user) throw new ApolloError("Не получилось авторизоваться");
+
+    context.res.cookie(
+      "refresh_token",
+      jwt.sign(
+        { userId: user.id } as TokenPayload,
+        configService.getRefreshTokenKey(),
+        {
+          expiresIn: this.REFRESH_TOKEN_EXPIRES_IN_DAYS * 24 * 60 * 60,
+        }
+      ),
+      {
+        httpOnly: true,
+        expires: addDays(new Date(), this.REFRESH_TOKEN_EXPIRES_IN_DAYS),
+      }
+    );
+
+    return {
       accessToken: jwt.sign(
         { userId: user.id } as TokenPayload,
         configService.getAccessTokenKey(),
@@ -54,11 +148,11 @@ export class AuthResolver {
     };
   }
 
-  @Mutation(() => LoginOutput)
+  @Mutation(() => AccessTokenOutput)
   async loginAdmin(
-    @Arg("loginInput") loginInput: LoginInput,
+    @Arg("input") loginInput: LoginAdminInput,
     @Ctx() context: IContext
-  ) {
+  ): Promise<AccessTokenOutput> {
     const admin = await context.prisma.admin.findUnique({
       where: { login: loginInput.login },
       select: {
@@ -87,7 +181,7 @@ export class AuthResolver {
       }
     );
 
-    return <LoginOutput>{
+    return <AccessTokenOutput>{
       accessToken: jwt.sign(
         { userId: admin.id } as TokenPayload,
         configService.getAccessTokenKey(),
@@ -103,8 +197,10 @@ export class AuthResolver {
     context.res.clearCookie("refresh_token");
   }
 
-  @Mutation(() => RefreshTokenOutput)
-  async refreshAccessToken(@Ctx() context: IContext) {
+  @Mutation(() => AccessTokenOutput)
+  async refreshAccessToken(
+    @Ctx() context: IContext
+  ): Promise<AccessTokenOutput> {
     const refreshToken = context.req.cookies.refresh_token;
 
     if (!refreshToken) throw new ApolloError("Не удалось обновить токен");
@@ -130,7 +226,7 @@ export class AuthResolver {
       }
     );
 
-    return <LoginOutput>{
+    return <AccessTokenOutput>{
       accessToken: jwt.sign(tokenPayload, configService.getAccessTokenKey(), {
         expiresIn: this.ACCESS_TOKEN_EXPIRES_IN_MINUTES * 60,
       }),

@@ -1,7 +1,7 @@
 import { Field, ObjectType } from "type-graphql";
 
 @ObjectType()
-export class RefreshTokenOutput {
+export class AccessTokenOutput {
   @Field()
   accessToken: string;
 }

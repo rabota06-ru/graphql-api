@@ -1,5 +1,6 @@
 import configService from "./config.service";
 import axios from "axios";
+import { AxiosBasicCredentials } from "axios";
 
 interface SendMessageParams {
   phone: string;
@@ -7,17 +8,23 @@ interface SendMessageParams {
 }
 
 export class SmsService {
-  private readonly BASE_URL: string;
+  private readonly BASE_URL = "http://@gate.smsaero.ru/v2";
+  private readonly credentials: AxiosBasicCredentials;
 
   constructor(credentials: { key: string; email: string }) {
-    this.BASE_URL = `https://${credentials.email}:${credentials.key}@gate.smsaero.ru/v2`;
+    this.credentials = {
+      password: credentials.key,
+      username: credentials.email,
+    };
   }
 
   sendAuthenticationCode(params: SendMessageParams) {
     const message = `${params.code} - код подтверждения на сайте rabota06.ru`;
 
-    return axios.get(`${this.BASE_URL}/sms/send`, {
+    return axios.get("/sms/send", {
+      baseURL: this.BASE_URL,
       params: { number: params.phone, text: message, sign: "SMS Aero" },
+      auth: this.credentials,
     });
   }
 }

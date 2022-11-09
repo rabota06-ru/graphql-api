@@ -76,7 +76,10 @@ export class AuthResolver {
 
     cacheService.clearValueById(cached.id);
 
-    const cachedValue = cacheService.cacheValue<string>(
+    const cachedValue = cacheService.cacheValue<{
+      authToken: string;
+      phone: string;
+    }>(
       (id) => ({
         authToken: jwt.sign({ cacheId: id }, configService.getAuthTokenKey(), {
           expiresIn: 60 * 5,
@@ -88,7 +91,7 @@ export class AuthResolver {
 
     return {
       authenticated: true,
-      authToken: cachedValue.value,
+      authToken: cachedValue.value.authToken,
     };
   }
 

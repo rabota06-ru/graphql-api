@@ -17,6 +17,19 @@ import { CheckAuthenticatedOutput } from "./dto/check-authenticated.output";
 import { LoginAdminInput } from "./dto/login-admin.input";
 import { AccessTokenOutput } from "./dto/access-token.output";
 import { LoginUserInput } from "./dto/login-user.input";
+import { CreateUserInput } from "./dto/create-user.input";
+
+/*
+ ---------------------------------
+ ---------------------------------
+ ---------------------------------
+ ---------------------------------
+  Я ПИСАЛ В СПЕШКЕ И ТУДА 100500 ПОВТОРЯЮЩИХСЯ СТРОК КОДА
+ ---------------------------------
+ ---------------------------------
+ ---------------------------------
+ ---------------------------------
+*/
 
 interface TokenPayload {
   userId: string;
@@ -140,6 +153,64 @@ export class AuthResolver {
     });
 
     if (!user) throw new ApolloError("Не получилось авторизоваться");
+
+    context.res.cookie(
+      "refresh_token",
+      jwt.sign(
+        { userId: user.id } as TokenPayload,
+        configService.getRefreshTokenKey(),
+        {
+          expiresIn: this.REFRESH_TOKEN_EXPIRES_IN_DAYS * 24 * 60 * 60,
+        }
+      ),
+      {
+        httpOnly: true,
+        expires: addDays(new Date(), this.REFRESH_TOKEN_EXPIRES_IN_DAYS),
+      }
+    );
+
+    return {
+      accessToken: jwt.sign(
+        { userId: user.id } as TokenPayload,
+        configService.getAccessTokenKey(),
+        {
+          expiresIn: this.ACCESS_TOKEN_EXPIRES_IN_MINUTES * 60,
+        }
+      ),
+    };
+  }
+
+  @Mutation(() => AccessTokenOutput)
+  async createUser(
+    @Arg("input") input: CreateUserInput,
+    @Ctx() context: IContext
+  ): Promise<AccessTokenOutput> {
+    let cacheId: number;
+    try {
+      cacheId = +(
+        jwt.verify(input.authToken, configService.getAuthTokenKey()) as Record<
+          "cacheId",
+          string
+        >
+      ).cacheId;
+    } catch {
+      throw new ApolloError("Не получилось создать пользователя");
+    }
+
+    const cachedValue = cacheService.getValueById<{
+      authToken: string;
+      phone: string;
+    }>(cacheId);
+
+    if (!cachedValue)
+      throw new ApolloError("Не получилось создать пользователя");
+
+    const user = await context.prisma.user.create({
+      data: {
+        login: cachedValue.phone,
+        role: input.data.role,
+      },
+    });
 
     context.res.cookie(
       "refresh_token",

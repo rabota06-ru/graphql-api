@@ -2,16 +2,18 @@ import { Field, InputType } from "type-graphql";
 import { UserCreateInput } from "../../../prisma/generated";
 
 @InputType()
-export class CreateUserInputData implements Pick<UserCreateInput, "role"> {
+export class CreateAndLoginUserInputData
+  implements Pick<UserCreateInput, "role">
+{
   @Field()
   role: "Applicant" | "Employer";
 }
 
 @InputType()
-export class CreateUserInput {
+export class CreateAndLoginUserInput {
   @Field()
   authToken: string;
 
-  @Field((_type) => CreateUserInputData)
-  data: CreateUserInputData;
+  @Field((_type) => CreateAndLoginUserInputData)
+  data: CreateAndLoginUserInputData;
 }

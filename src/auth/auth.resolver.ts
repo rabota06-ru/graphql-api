@@ -17,7 +17,7 @@ import { CheckAuthenticatedOutput } from "./dto/check-authenticated.output";
 import { LoginAdminInput } from "./dto/login-admin.input";
 import { AccessTokenOutput } from "./dto/access-token.output";
 import { LoginUserInput } from "./dto/login-user.input";
-import { CreateUserInput } from "./dto/create-user.input";
+import { CreateAndLoginUserInput } from "./dto/create-and-login-user.input";
 
 /*
  ---------------------------------
@@ -181,8 +181,8 @@ export class AuthResolver {
   }
 
   @Mutation(() => AccessTokenOutput)
-  async createUser(
-    @Arg("input") input: CreateUserInput,
+  async createAndLoginUser(
+    @Arg("input") input: CreateAndLoginUserInput,
     @Ctx() context: IContext
   ): Promise<AccessTokenOutput> {
     let cacheId: number;

@@ -18,28 +18,26 @@ import { LoginAdminInput } from "./dto/login-admin.input";
 import { AccessTokenOutput } from "./dto/access-token.output";
 import { LoginUserInput } from "./dto/login-user.input";
 import { CreateAndLoginUserInput } from "./dto/create-and-login-user.input";
+import {
+  RefreshTokenPayload,
+  setRefreshTokenCookie,
+} from "./utils/set-refresh-token-cookie";
+import { getSignedAccessToken } from "./utils/get-signed-access-token";
 
 /*
  ---------------------------------
  ---------------------------------
  ---------------------------------
  ---------------------------------
-  Я ПИСАЛ В СПЕШКЕ И ТУДА 100500 ПОВТОРЯЮЩИХСЯ СТРОК КОДА
+  Я ПИСАЛ В СПЕШКЕ И ТУТ 100500 ПОВТОРЯЮЩИХСЯ СТРОК КОДА
  ---------------------------------
  ---------------------------------
  ---------------------------------
  ---------------------------------
 */
 
-interface TokenPayload {
-  userId: string;
-}
-
 @Resolver()
 export class AuthResolver {
-  REFRESH_TOKEN_EXPIRES_IN_DAYS = 30;
-  ACCESS_TOKEN_EXPIRES_IN_MINUTES = 30;
-
   @Mutation(() => SendMessageOutput)
   async sendAuthCodeMessage(
     @Arg("input") input: SendMessageInput
@@ -152,33 +150,15 @@ export class AuthResolver {
 
     const user = await context.prisma.user.findUnique({
       where: { login: cachedValue.phone },
+      select: { id: true },
     });
 
     if (!user) throw new ApolloError("Не получилось авторизоваться");
 
-    context.res.cookie(
-      "refresh_token",
-      jwt.sign(
-        { userId: user.id } as TokenPayload,
-        configService.getRefreshTokenKey(),
-        {
-          expiresIn: this.REFRESH_TOKEN_EXPIRES_IN_DAYS * 24 * 60 * 60,
-        }
-      ),
-      {
-        httpOnly: true,
-        expires: addDays(new Date(), this.REFRESH_TOKEN_EXPIRES_IN_DAYS),
-      }
-    );
+    setRefreshTokenCookie(context.res, user.id);
 
     return {
-      accessToken: jwt.sign(
-        { userId: user.id } as TokenPayload,
-        configService.getAccessTokenKey(),
-        {
-          expiresIn: this.ACCESS_TOKEN_EXPIRES_IN_MINUTES * 60,
-        }
-      ),
+      accessToken: getSignedAccessToken(user.id),
     };
   }
 
@@ -214,31 +194,13 @@ export class AuthResolver {
         login: cachedValue.phone,
         role: input.data.role,
       },
+      select: { id: true },
     });
 
-    context.res.cookie(
-      "refresh_token",
-      jwt.sign(
-        { userId: user.id } as TokenPayload,
-        configService.getRefreshTokenKey(),
-        {
-          expiresIn: this.REFRESH_TOKEN_EXPIRES_IN_DAYS * 24 * 60 * 60,
-        }
-      ),
-      {
-        httpOnly: true,
-        expires: addDays(new Date(), this.REFRESH_TOKEN_EXPIRES_IN_DAYS),
-      }
-    );
+    setRefreshTokenCookie(context.res, user.id);
 
     return {
-      accessToken: jwt.sign(
-        { userId: user.id } as TokenPayload,
-        configService.getAccessTokenKey(),
-        {
-          expiresIn: this.ACCESS_TOKEN_EXPIRES_IN_MINUTES * 60,
-        }
-      ),
+      accessToken: getSignedAccessToken(user.id),
     };
   }
 
@@ -260,29 +222,10 @@ export class AuthResolver {
     if (!(await bcrypt.compare(loginInput.password, admin.password)))
       throw new ApolloError("Не удалось авторизоваться");
 
-    context.res.cookie(
-      "refresh_token",
-      jwt.sign(
-        { userId: admin.id } as TokenPayload,
-        configService.getRefreshTokenKey(),
-        {
-          expiresIn: this.REFRESH_TOKEN_EXPIRES_IN_DAYS * 24 * 60 * 60,
-        }
-      ),
-      {
-        httpOnly: true,
-        expires: addDays(new Date(), this.REFRESH_TOKEN_EXPIRES_IN_DAYS),
-      }
-    );
+    setRefreshTokenCookie(context.res, admin.id);
 
-    return <AccessTokenOutput>{
-      accessToken: jwt.sign(
-        { userId: admin.id } as TokenPayload,
-        configService.getAccessTokenKey(),
-        {
-          expiresIn: this.ACCESS_TOKEN_EXPIRES_IN_MINUTES * 60,
-        }
-      ),
+    return {
+      accessToken: getSignedAccessToken(admin.id),
     };
   }
 
@@ -299,31 +242,20 @@ export class AuthResolver {
 
     if (!refreshToken) throw new ApolloError("Не удалось обновить токен");
 
-    let tokenPayload: TokenPayload;
+    let tokenPayload: RefreshTokenPayload;
     try {
       tokenPayload = jwt.verify(
         refreshToken,
         configService.getRefreshTokenKey()
-      ) as TokenPayload;
+      ) as RefreshTokenPayload;
     } catch {
       throw new ApolloError("Не удалось обновить токен");
     }
 
-    context.res.cookie(
-      "refresh_token",
-      jwt.sign(tokenPayload, configService.getRefreshTokenKey(), {
-        expiresIn: this.REFRESH_TOKEN_EXPIRES_IN_DAYS * 24 * 60 * 60,
-      }),
-      {
-        httpOnly: true,
-        expires: addDays(new Date(), this.REFRESH_TOKEN_EXPIRES_IN_DAYS),
-      }
-    );
+    setRefreshTokenCookie(context.res, tokenPayload.userId);
 
-    return <AccessTokenOutput>{
-      accessToken: jwt.sign(tokenPayload, configService.getAccessTokenKey(), {
-        expiresIn: this.ACCESS_TOKEN_EXPIRES_IN_MINUTES * 60,
-      }),
+    return {
+      accessToken: getSignedAccessToken(tokenPayload.userId),
     };
   }
 
@@ -338,34 +270,23 @@ export class AuthResolver {
         authenticated: false,
       };
 
-    let tokenPayload: TokenPayload;
+    let tokenPayload: RefreshTokenPayload;
     try {
       tokenPayload = jwt.verify(
         refreshToken,
         configService.getRefreshTokenKey()
-      ) as TokenPayload;
+      ) as RefreshTokenPayload;
     } catch {
       return {
         authenticated: false,
       };
     }
 
-    context.res.cookie(
-      "refresh_token",
-      jwt.sign(tokenPayload, configService.getRefreshTokenKey(), {
-        expiresIn: this.REFRESH_TOKEN_EXPIRES_IN_DAYS * 24 * 60 * 60,
-      }),
-      {
-        httpOnly: true,
-        expires: addDays(new Date(), this.REFRESH_TOKEN_EXPIRES_IN_DAYS),
-      }
-    );
+    setRefreshTokenCookie(context.res, tokenPayload.userId);
 
     return {
       authenticated: true,
-      accessToken: jwt.sign(tokenPayload, configService.getAccessTokenKey(), {
-        expiresIn: this.ACCESS_TOKEN_EXPIRES_IN_MINUTES * 60,
-      }),
+      accessToken: getSignedAccessToken(tokenPayload.userId),
     };
   }
 }

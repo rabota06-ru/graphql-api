@@ -148,6 +148,8 @@ export class AuthResolver {
 
     if (!cachedValue) throw new ApolloError("Не получилось авторизоваться");
 
+    cacheService.clearValueById(cacheId);
+
     const user = await context.prisma.user.findUnique({
       where: { login: cachedValue.phone },
     });
@@ -204,6 +206,8 @@ export class AuthResolver {
 
     if (!cachedValue)
       throw new ApolloError("Не получилось создать пользователя");
+
+    cacheService.clearValueById(cacheId);
 
     const user = await context.prisma.user.create({
       data: {

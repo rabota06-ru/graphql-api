@@ -131,6 +131,7 @@ model ResponseToVacancy {
     vacancyId String
     resume    Resume   @relation(fields: [resumeId], references: [id])
     resumeId  String
+    viewed    Boolean  @default(false)
     createdAt DateTime @default(now())
 }
 
@@ -140,6 +141,7 @@ model InvitationToVacancy {
     vacancyId String
     resume    Resume   @relation(fields: [resumeId], references: [id])
     resumeId  String
+    viewed    Boolean  @default(false)
     createdAt DateTime @default(now())
 }
 

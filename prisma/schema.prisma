@@ -26,16 +26,14 @@ enum UserRole {
 }
 
 model User {
-    id                   String            @id @default(cuid())
-    login                String            @unique
-    role                 UserRole
-    applicantProfile     ApplicantProfile?
-    employerProfile      EmployerProfile?
-    chatWithAdmin        AdminChat?
-    chatsWithFirstUsers  Chat[]            @relation(name: "ChatsWithFirstUsers")
-    chatsWithSecondUsers Chat[]            @relation(name: "ChatsWithSecondUsers")
-    createdAt            DateTime          @default(now())
-    updatedAt            DateTime          @updatedAt
+    id               String            @id @default(cuid())
+    login            String            @unique
+    role             UserRole
+    applicantProfile ApplicantProfile?
+    employerProfile  EmployerProfile?
+    chatWithAdmin    AdminChat?
+    createdAt        DateTime          @default(now())
+    updatedAt        DateTime          @updatedAt
 }
 
 model ApplicantProfile {
@@ -97,6 +95,8 @@ model Resume {
     applicantProfile   ApplicantProfile        @relation(fields: [applicantProfileId], references: [id])
     applicantProfileId String                  @unique
     savedBy            ResumeSavedByEmployer[]
+    responses          ResponseToVacancy[]
+    invitations        InvitationToVacancy[]
     createdAt          DateTime                @default(now())
     updatedAt          DateTime                @updatedAt
 }
@@ -119,28 +119,27 @@ model Vacancy {
     archived        Boolean                   @default(false)
     archivedReason  String?
     savedBy         VacancySavedByApplicant[]
+    responses       ResponseToVacancy[]
+    invitations     InvitationToVacancy[]
     createdAt       DateTime                  @default(now())
     updatedAt       DateTime                  @updatedAt
 }
 
-model Chat {
-    id             String        @id @default(cuid())
-    firstUser      User          @relation(name: "ChatsWithFirstUsers", fields: [firstUserId], references: [id])
-    firstUserId    String
-    secondUser     User          @relation(name: "ChatsWithSecondUsers", fields: [secondUserId], references: [id])
-    secondUserId   String
-    viewedByFirst  Boolean       @default(false)
-    viewedBySecond Boolean       @default(false)
-    messages       ChatMessage[]
-    createdAt      DateTime      @default(now())
-    updatedAt      DateTime      @updatedAt
+model ResponseToVacancy {
+    id        String   @id @default(cuid())
+    vacancy   Vacancy  @relation(fields: [vacancyId], references: [id])
+    vacancyId String
+    resume    Resume   @relation(fields: [resumeId], references: [id])
+    resumeId  String
+    createdAt DateTime @default(now())
 }
 
-model ChatMessage {
+model InvitationToVacancy {
     id        String   @id @default(cuid())
-    chat      Chat     @relation(fields: [chatId], references: [id])
-    chatId    String
-    message   String
+    vacancy   Vacancy  @relation(fields: [vacancyId], references: [id])
+    vacancyId String
+    resume    Resume   @relation(fields: [resumeId], references: [id])
+    resumeId  String
     createdAt DateTime @default(now())
 }
 

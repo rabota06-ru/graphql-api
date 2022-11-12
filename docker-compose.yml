@@ -4,9 +4,4 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-    networks:
-      - default
-
-networks:
-  default:
-    driver: host
+    network_mode: host

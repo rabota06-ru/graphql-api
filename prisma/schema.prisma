@@ -164,18 +164,13 @@ model Chat {
     @@unique([employerId, applicantId])
 }
 
-enum MessageSender {
-    Applicant
-    Employer
-}
-
 model ChatMessage {
-    id        String        @id @default(cuid())
-    chat      Chat          @relation(fields: [chatId], references: [id])
+    id        String   @id @default(cuid())
+    chat      Chat     @relation(fields: [chatId], references: [id])
     chatId    String
     message   String
-    sender    MessageSender
-    createdAt DateTime      @default(now())
+    sender    UserRole
+    createdAt DateTime @default(now())
 }
 
 model AdminChat {

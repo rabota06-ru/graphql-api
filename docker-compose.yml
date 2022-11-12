@@ -1,20 +1,12 @@
 version: "3.9"
 services:
-  postgres:
-    image: "postgres"
-    container_name: postgres_db
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER
-      - POSTGRES_PASSWORD
-      - POSTGRES_DB
   server:
-    build: 
+    build:
       context: .
       dockerfile: ./Dockerfile
-    ports:
-      - "3000:3000"
-    depends_on:
-      - postgres
-    
+    networks:
+      - default
+
+networks:
+  default:
+    driver: host

@@ -18,7 +18,7 @@ export class SmsService {
     };
   }
 
-  sendAuthenticationCode(params: SendMessageParams) {
+  async sendAuthenticationCode(params: SendMessageParams) {
     const message = `${params.code} - код подтверждения на сайте rabota06.ru`;
 
     if (configService.isProduction()) {

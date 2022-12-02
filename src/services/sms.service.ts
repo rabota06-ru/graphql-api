@@ -21,11 +21,15 @@ export class SmsService {
   sendAuthenticationCode(params: SendMessageParams) {
     const message = `${params.code} - код подтверждения на сайте rabota06.ru`;
 
-    return axios.get("/sms/send", {
-      baseURL: this.BASE_URL,
-      params: { number: params.phone, text: message, sign: "SMS Aero" },
-      auth: this.credentials,
-    });
+    if (configService.isProduction()) {
+      return axios.get("/sms/send", {
+        baseURL: this.BASE_URL,
+        params: { number: params.phone, text: message, sign: "SMS Aero" },
+        auth: this.credentials,
+      });
+    } else {
+      console.log(params.code);
+    }
   }
 }
 

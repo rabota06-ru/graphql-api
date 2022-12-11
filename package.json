@@ -4,7 +4,8 @@
   "description": "API-cервер для сайта rabota06.ru",
   "main": "index.ts",
   "scripts": {
-    "start:dev": "npm run prisma:migrate:dev && npm run prisma:generate && nodemon  src/index.ts ",
+    "start:dev": "npm run prisma:migrate:dev && npm run prisma:generate && nodemon  src/index.ts",
+    "seed": "ts-node prisma/seed/seed.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",

@@ -184,12 +184,18 @@ model AdminChat {
     updatedAt     DateTime           @updatedAt
 }
 
+enum AdminChatMessageSender {
+    User
+    Admin
+}
+
 model AdminChatMessage {
-    id        String    @id @default(cuid())
-    chat      AdminChat @relation(fields: [chatId], references: [id])
+    id        String                 @id @default(cuid())
+    chat      AdminChat              @relation(fields: [chatId], references: [id])
     chatId    String
     message   String
-    createdAt DateTime  @default(now())
+    sender    AdminChatMessageSender
+    createdAt DateTime               @default(now())
 }
 
 enum ApplicationType {

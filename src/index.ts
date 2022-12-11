@@ -38,7 +38,9 @@ const start = async () => {
       return { prisma, req, res } as IContext;
     },
     cors: {
-      origin: configService.isProduction() ? [] : ["https://127.0.0.1:5173"],
+      origin: configService.isProduction()
+        ? []
+        : ["https://studio.apollographql.com", "https://127.0.0.1:5173"],
       credentials: true,
     },
   });

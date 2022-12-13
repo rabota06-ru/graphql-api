@@ -7,8 +7,8 @@ export async function createEmployerApplicantChats(prisma: PrismaClient) {
 const chats: Prisma.ChatUncheckedCreateInput[] = [
   {
     id: "clbjgg1ok001y3b6m29m763qh",
-    applicantId: "clbjbxgdy00003b6nh3hhp276",
-    employerId: "clbjcx1i500003b6m8ywirm3c",
+    applicantId: "clbjbxgdy00083b6nlxby561h",
+    employerId: "clbjcx1i500023b6mivy0pa27",
     viewedByApplicant: false,
     viewedByEmployer: false,
   },

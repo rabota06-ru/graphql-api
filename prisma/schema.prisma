@@ -89,7 +89,7 @@ model Resume {
     phoneHidden        Boolean
     birthday           DateTime
     placeOfResidence   Int
-    desiredPost        String?
+    desiredPost        String
     fieldOfActivity    Int
     education          String?
     experience         String?
